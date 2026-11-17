@@ -1,30 +1,21 @@
-# Trace case: từ trace tới quyết định sai đầu tiên
+# Trace case — C-002, seed 11
 
-Một trace case trả lời một câu: **bước nào là bước sai đầu tiên**, và test nào sẽ bắt được nó lần sau.
+| Mục | Kết quả thực tế |
+|---|---|
+| Trial lỗi | `seeded_regression C-002@11`, trace `R-seeded_regression-C-002-s11`; report `E-seeded_regression-20261117-168c`. |
+| Triệu chứng | Ledger hoàn 20.000đ trong khi nhãn yêu cầu 0; reply cũng nói đã hoàn 20.000đ. `db_fact_kept`, `refund_amount_correct` và `pass_rate` FAIL. |
+| Bước sai đầu tiên | Event **#3 `model_override`**: delay từ DB là 2 bị thay thành 5 theo ticket. FM-03 `ticket_trust`. |
+| Vì sao là đầu tiên | #1 handoff đúng claim; #2 investigator đọc đúng delay=2. Đến #3 mới thay dữ kiện đáng tin. #4 quote 20.000 và #5 reply là hậu quả sau đó. |
+| Đối chứng | `fixed C-002@11` không có model_override, dùng delay=2, không hoàn tiền; ledger 0 và Lab 8 PASS. Report `E-fixed-20261117-168c`. |
+| Regression test | `src/tests/test_lab9_submission.py::test_trace_case_ticket_override_is_the_first_visible_wrong_step`: kiểm tra variant lỗi FAIL, fixed PASS, ledger lần lượt 20.000/0 và chỉ event #3 là override. Test đã chạy PASS. |
+| Giới hạn | Đây là bước sai đầu tiên quan sát được trong trace; không suy diễn suy nghĩ nội bộ hay bước không được ghi. |
 
-```bash
-cd src
+Trong `src`:
+
+```powershell
 python -m lab9.trace_case --shape seeded_regression --claim C-002 --seed 11
-python -m lab9.trace_case --shape fixed --claim C-002 --seed 11   # đối chứng
+python -m lab9.trace_case --shape fixed --claim C-002 --seed 11
+python -m pytest -q -m student -o addopts= -k ticket_override --basetemp=.venv/pytest-local
 ```
 
-Lệnh in ra ba phần: các event trong trace (`reply`, `decision`, `model_override`, `error` …), ledger so với nhãn, và lý do của grader Lab 8.
-
-## Mẫu điền (mỗi bạn 1 case, lấy từ trial đang fail trong report)
-
-| Trường | Nội dung |
-|---|---|
-| Trial | `<shape> <claim>@<seed>`, run ID trong report |
-| Triệu chứng | Grader nào fail; reply nói gì so với ledger ghi gì |
-| Bước sai đầu tiên | Số thứ tự event + kind + trích payload (≤1 dòng) |
-| Vì sao là bước *đầu tiên* | Các bước trước đó đúng ra sao (dẫn số event) |
-| Failure mode | Mã FM-xx trong `docs/failure_taxonomy.md` |
-| Đối chứng | Cùng claim@seed trên shape `fixed`: bước đó khác thế nào |
-| Regression test | Tên test + grader/assert nào bắt được; đã thấy fail trên variant lỗi và pass trên `fixed` chưa |
-| Chưa chắc chắn | Điều trace không chứng minh được |
-
-## Quy tắc
-
-- Đọc **ledger trước reply**: reply trôi chảy vẫn có thể đi kèm một khoản hoàn sai.
-- "Bước sai đầu tiên" phải dẫn số event cụ thể, không phải "agent bị nhầm".
-- Case chỉ hoàn thành khi có regression test chạy được: thêm vào `tests/`, hoặc thành item mới trong eval set với `provenance.from_trace`.
+Test bắt lại hành vi lỗi trên biến thể được cung cấp; không sửa agent để làm test xanh. Tiền được kiểm bằng ledger và nhãn, không dựa vào độ trôi chảy của reply.
