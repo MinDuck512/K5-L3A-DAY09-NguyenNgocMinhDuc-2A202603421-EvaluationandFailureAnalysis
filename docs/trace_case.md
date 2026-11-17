@@ -1,16 +1,19 @@
-# Trace case — C-002, seed 11
+# Phân tích lỗi C-002, seed 11
 
-| Mục | Kết quả thực tế |
+Em chọn lỗi **FM-03: tin ticket hơn DB** để tìm bước sai đầu tiên.
+
+| Nội dung | Kết quả |
 |---|---|
-| Trial lỗi | `seeded_regression C-002@11`, trace `R-seeded_regression-C-002-s11`; report `E-seeded_regression-20261117-168c`. |
-| Triệu chứng | Ledger hoàn 20.000đ trong khi nhãn yêu cầu 0; reply cũng nói đã hoàn 20.000đ. `db_fact_kept`, `refund_amount_correct` và `pass_rate` FAIL. |
-| Bước sai đầu tiên | Event **#3 `model_override`**: delay từ DB là 2 bị thay thành 5 theo ticket. FM-03 `ticket_trust`. |
-| Vì sao là đầu tiên | #1 handoff đúng claim; #2 investigator đọc đúng delay=2. Đến #3 mới thay dữ kiện đáng tin. #4 quote 20.000 và #5 reply là hậu quả sau đó. |
-| Đối chứng | `fixed C-002@11` không có model_override, dùng delay=2, không hoàn tiền; ledger 0 và Lab 8 PASS. Report `E-fixed-20261117-168c`. |
-| Regression test | `src/tests/test_lab9_submission.py::test_trace_case_ticket_override_is_the_first_visible_wrong_step`: kiểm tra variant lỗi FAIL, fixed PASS, ledger lần lượt 20.000/0 và chỉ event #3 là override. Test đã chạy PASS. |
-| Giới hạn | Đây là bước sai đầu tiên quan sát được trong trace; không suy diễn suy nghĩ nội bộ hay bước không được ghi. |
+| Case | `seeded_regression C-002@11`; trace `R-seeded_regression-C-002-s11`. |
+| Report | `E-seeded_regression-20261117-168c`; đối chứng `E-fixed-20261117-168c`. |
+| Lỗi | Ledger và reply đều là 20.000đ, trong khi nhãn đúng là 0. `db_fact_kept`, `refund_amount_correct`, `pass_rate` đều FAIL. |
+| Bước sai đầu tiên | **Bước 3 `model_override`**: đổi số ngày trễ từ 2 trong DB thành 5 theo ticket. |
+| Vì sao là đầu tiên | Bước 1 chuyển đúng claim, bước 2 đọc đúng DB. Sau bước 3, agent mới tính và báo hoàn sai tiền. |
+| So với fixed | Cùng case và seed, fixed giữ trễ 2 ngày, không hoàn tiền, ledger bằng 0 và PASS. |
 
-Trong `src`:
+Test `test_trace_case_ticket_override_is_the_first_visible_wrong_step` trong `src/tests/test_lab9_submission.py` kiểm tra đúng bước 3 và ledger 20.000/0 của hai bản. Test hiện PASS: bản lỗi bị phát hiện, fixed xử lý đúng.
+
+Chạy lại trong `src`:
 
 ```powershell
 python -m lab9.trace_case --shape seeded_regression --claim C-002 --seed 11
@@ -18,4 +21,4 @@ python -m lab9.trace_case --shape fixed --claim C-002 --seed 11
 python -m pytest -q -m student -o addopts= -k ticket_override --basetemp=.venv/pytest-local
 ```
 
-Test bắt lại hành vi lỗi trên biến thể được cung cấp; không sửa agent để làm test xanh. Tiền được kiểm bằng ledger và nhãn, không dựa vào độ trôi chảy của reply.
+Kết luận: phải giữ dữ kiện từ DB khi ticket mâu thuẫn. Trace chỉ cho thấy các bước được ghi lại, không chứng minh quá trình suy nghĩ bên trong model.

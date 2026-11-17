@@ -1,26 +1,26 @@
-# Judge audit
+# Đánh giá judge
 
-FAIL là lớp dương. Kết quả từ hai CSV replay công khai, mỗi tập 100 dòng; không phải nhãn mới do người làm bài tự thu thập.
+Dùng hai CSV công khai, mỗi tập 100 dòng, với FAIL là lớp dương. Điều kiện đạt: κ≥0.6, Precision≥0.8, Recall≥0.7.
 
-| Judge | TP / FP / FN / TN | Precision | Recall | κ | Quyết định |
+| Judge | TP / FP / FN / TN | Precision | Recall | κ | Kết luận |
 |---|---|---|---|---|---|
-| tone_ok | 24 / 4 / 6 / 66 | 0.857 | 0.800 | 0.757 | Đạt κ≥0.6, P≥0.8, R≥0.7; dùng đánh giá giọng điệu. |
-| helpful | 9 / 0 / 21 / 70 | 1.000 | 0.300 | 0.375 | Không đạt; không dùng làm gate. |
+| tone_ok | 24 / 4 / 6 / 66 | 0.857 | 0.800 | 0.757 | Đủ dùng để chấm giọng điệu. |
+| helpful | 9 / 0 / 21 / 70 | 1.000 | 0.300 | 0.375 | Không dùng làm gate vì bỏ sót 21 lỗi. |
 
-Tỉ lệ FAIL quan sát tone/helpful là 0.28/0.09; Rogan–Gladen hiệu chỉnh đều về 0.30. Precision cao của helpful không bù được 21 lỗi bị bỏ sót. Số tiền đúng phải được kiểm bằng code.
+Tỉ lệ lỗi quan sát là 0.28/0.09; Rogan–Gladen hiệu chỉnh cả hai về 0.30. Precision cao chưa đủ nếu Recall thấp.
 
-## Đọc lại 7 bất đồng
+## Các trường hợp bất đồng
 
-“Người” là nhãn chuẩn có sẵn trong CSV. Các kết luận dưới đây đối chiếu câu trả lời với nhãn và ghi chú của tập đó.
+Giữ nhãn người có sẵn trong CSV làm chuẩn để đối chiếu, không coi đây là dữ liệu mới tự gán nhãn.
 
-| Case | Judge / người | Kết luận và điều chỉnh rubric |
+| Case | Judge / người | Nhận xét và cách sửa rubric |
 |---|---|---|
-| H-008 | PASS / FAIL | Theo nhãn người: “em/anh… rồi nha, check” quá thân mật. Nêu ví dụ xưng hô chuyên nghiệp, không chỉ kiểm sự thân thiện. |
-| H-017 | PASS / FAIL | Theo nhãn người: “Dạ, bạn ơi… rồi nha” chưa phù hợp. Không dùng từ “Dạ” làm điều kiện đủ để PASS. |
-| H-029 | PASS / FAIL | Theo nhãn người: “không cần nhắn thêm” mang tính ra lệnh. Đánh giá toàn câu, kể cả vế sau lời mở đầu lịch sự. |
-| H-042 | FAIL / PASS | Theo nhãn người: câu ngắn vẫn đủ thông tin hoàn tiền và thời gian về tài khoản. Không bắt buộc xin lỗi dài. |
-| H-051 | FAIL / PASS | Theo nhãn người: thuật ngữ “refund” được chấp nhận. Không tự động FAIL khi có từ tiếng Anh. |
-| HL-015 | PASS / FAIL | Theo nhãn người: reply 55.000đ, ledger 40.000đ. Tách “đúng tiền” thành assertion code. |
-| HL-016 | PASS / FAIL | Theo nhãn người: lời xin lỗi dài vẫn báo 55.000đ thay vì 35.000đ. Không dùng độ dài/lịch sự thay tính đúng. |
+| H-008 | PASS / FAIL | “Em/anh… rồi nha, check” quá thân mật; thêm ví dụ xưng hô phù hợp. |
+| H-029 | PASS / FAIL | “Không cần nhắn thêm” mang tính ra lệnh; cần xét cả câu. |
+| H-042 | FAIL / PASS | Câu ngắn nhưng đủ tiền và thời gian nhận; không bắt buộc xin lỗi dài. |
+| H-051 | FAIL / PASS | Từ “refund” được chấp nhận; không tự động loại câu có tiếng Anh. |
+| HL-015 | PASS / FAIL | Reply 55.000đ, ledger 40.000đ; kiểm tiền bằng code. |
 
-Chạy lại: `python -m lab9.judge --csv data/eval/judge_tone_public.csv --audit 5` (exit 0); đổi sang `judge_helpful_public.csv` nhận exit 1 đúng kỳ vọng. Chưa thay dữ liệu replay để báo số đẹp hơn. Muốn kiểm chứng rubric mới cần tập nhãn người độc lập, chưa công khai.
+Chọn tone_ok để chấm giọng điệu, loại helpful khỏi gate; tiền và phê duyệt luôn kiểm bằng code. Kết quả mới chỉ dựa trên CSV replay công khai, cần thêm nhãn người độc lập để kiểm chứng.
+
+Chạy `python -m lab9.judge --csv data/eval/judge_tone_public.csv --audit 5` trong `src` nhận exit 0. Đổi sang `judge_helpful_public.csv` nhận exit 1 đúng kỳ vọng.
